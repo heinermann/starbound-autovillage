@@ -1,0 +1,8 @@
+{
+  "input" : [],
+  "output" : {
+    "item" : "money",
+    "count" : 10000000
+  },
+  "groups" : [ "mod", "all" ]
+}

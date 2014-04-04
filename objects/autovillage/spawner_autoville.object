@@ -1,0 +1,37 @@
+{
+  "objectName" : "spawnerautovillagenpc",
+  "rarity" : "Common",
+  "objectType" : "wire",
+  "description" : "Spawn your very own villager!",
+  "shortdescription" : "AutoVillage Spawner",
+  "race" : "human",
+  "printable" : false,
+  "category" : "spawner",
+  "price" : 300,
+
+  "inventoryIcon" : "defaulticon.png",
+  "orientations" : [
+    {
+      "image" : "spawner_human.png",
+      "imagePosition" : [-8, -7],
+
+      "spaceScan" : 0.1,
+      "anchors" : [ "bottom" ]
+    }
+  ],
+
+  "scripts" : [ "/objects/autovillage/spawner.lua" ],
+  "scriptDelta" : 5,
+  //6000,
+
+  "animation" : "/objects/spawner/spawners/human.animation",
+
+  "animationParts" : {
+    "switch" : "spawner_human.png"
+  },
+  "animationPosition" : [-8, -7],
+
+  "inboundNodes" : [ ],
+  "outboundNodes" : [ ]
+
+}
