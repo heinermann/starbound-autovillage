@@ -203,6 +203,7 @@ Autovillagers will construct dynamic structures similar to how a dungeon is crea
  
 ### Concert hall
  * A place where Actors and Musicians present their acts.
+ 
 #### Acts
  * Romeo and Juliet?
  * Grease?
@@ -224,6 +225,7 @@ Autovillagers will construct dynamic structures similar to how a dungeon is crea
 ### Church of the X
  * A church that brings glory to the local village deity (which is X).
  * Priests are found here.
+ 
 #### Religions (either parody or made-up, influence speech and clothing)
  * Helix Fossil
  * Pastafarianism
