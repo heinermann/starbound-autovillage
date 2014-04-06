@@ -3,7 +3,6 @@
 
 
 function map_add(thing, position, description)
-{
   local x = position[1] / 1000.0
   local y = position[2] / 1000.0
   local xy = tostring(x) .. "_" .. tostring(y)
@@ -20,4 +19,4 @@ function map_add(thing, position, description)
   if ( storage.mapThing[thing] == nil ) then storage.mapThing[thing] = {} end
   
   storage.mapThing[thing][xy] = description or true
-}
+end

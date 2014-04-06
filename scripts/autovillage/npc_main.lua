@@ -42,6 +42,7 @@ function main()
   end
 end
 
+-- Retrieves the name of the NPC.
 function name()
   return world.entityName(entity.id())
 end
@@ -120,6 +121,9 @@ function interact(args)
   return nil
 end
 
+-- Causes the NPC to speak. It randomly chooses one of the given arguments.
+-- It then parses the text message, finds synonyms, punctuates it, etc. before
+-- finally saying the message out loud.
 function talk(...)
   local arg = {...}
   if ( #arg == 0 ) then return end
@@ -136,12 +140,17 @@ function listen(from, message)
   
 end
 
+-- Logs a message with the given NPCs name attached.
 function log(msg, ...)
   world.logInfo("[" .. world.entityName(entity.id()) .. "] " .. msg, ...)
 end
 
 
 --------------------------------------------------------------------------------
+-- Sets the facing direction of the entity. Also changes the aim position.
+-- @param {integer} direction The direction to face. A negative value
+--                            will face left, and a positive value will
+--                            face right.
 function setFacingDirection(direction)
   entity.setFacingDirection(direction)
   entity.setAimPosition(vec2.add({ util.toDirection(direction), -1 }, entity.position()))
