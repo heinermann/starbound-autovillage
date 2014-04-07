@@ -5,6 +5,7 @@ EQUIP = { "head", "chest", "legs", "back", "primary", "alt", "sheathedprimary", 
 -- NEED THE FOLLOWING:
 -- deposit_all(itemname, targetContainer)
 
+-------------------------------------------------------------------------------------------------
 
 -- Retrieves the current maximum inventory size
 -- TODO: increase size with backpacks/carts/wheelbarrows
@@ -22,31 +23,57 @@ function inv_is_full()
   return inv_size() >= inv_max()
 end
 
--- Adds an item to the inventory, regardless if it is full or not
-function inv_add_item(item)
-  --for _,inv_item in ipairs(storage.inventory) do
-  --  -- table_deepcompare(t1,t2)
-  --  local stack = item.count
-  --  if ( item_eq(item,inv_item) ) then
-  --    -- If the stack exceeds the max item capacity
-  --    if ( inv_item.count + item.count > 1000 ) then
-  --      item.count = item.count - (1000 - inv_item.count)
-  --      inv_item.count = 1000
-  --    else -- stack the items
-  --      inv_item.count = inv_item.count + item.count
-  --      return -- short-circuit
-  --    end
-  --  end
-  --end
+-- Adds a list of items to the inventory. It returns the remainder of the items
+-- that were not able to fit in the bag.
+function inv_add_items(items)
+  local result_items = {}
+  for _,itm in ipairs(items) do
+    local result = inv_add_item(itm)
+    if ( result ~= nil ) then
+      table.insert(result_items, result)
+    end
+  end
+  return result_items
+end
+
+-- Adds a single item to the inventory, stacking with like-items (up to 1000), 
+-- and then adding the remainder of the item if it isn't found into a new slot.
+-- If there is not enough space in the inventory, the remaining stack of the item
+-- is returned. If successful, then nil is returned.
+-- Guaranteed to make a copy of the item argument.
+function inv_add_item(item_)
+  local item = table_deepcopy(item_)
+
+  for _,inv_item in ipairs(storage.inventory) do
+
+    local stack = item.count
+    if ( item_eq(item, inv_item) ) then
+      -- If the stack exceeds the max item capacity
+      if ( inv_item.count + item.count > 1000 ) then
+        item.count = item.count - (1000 - inv_item.count)
+        inv_item.count = 1000
+      else -- stack the items
+        inv_item.count = inv_item.count + item.count
+        return nil -- short-circuit
+      end
+    end
+
+  end
 
   -- If no suitable item was found or there is some stack remaining
-  table.insert(storage.inventory, item)
+  if ( not inv_is_full() ) then
+    table.insert(storage.inventory, item)
+    return nil
+  else
+    return item
+  end
 end
 
 
 -- Checks items within an arbitrary radius of the entity's current location.
 -- If there is room in the entity's inventory, the item will be picked up and
 -- placed in the inventory.
+-- TODO: Don't pick up items if inv. is full.
 function inv_check_drops()
   local pos = entity.position()
   local drops = world.itemDropQuery(pos, 5)
@@ -57,7 +84,12 @@ function inv_check_drops()
       if ( item ~= nil ) then
         log("Got a " .. item.name)
         --DUMP.dumpTable(item)
-        inv_add_item(item)
+
+        local result = inv_add_item(item)
+        if ( result ~= nil ) then
+          log("Inventory full. NOTE: Should not have picked this up.")
+          item_toss(result)
+        end
       end
       
     end
@@ -67,9 +99,10 @@ end
 -- Finds an item of the given item type (ex: harvestingtool) and returns its item descriptor.
 -- Returns nil if there were no items of that type available.
 function inv_get_itemtype(itemtype)
-  for _,item in ipairs(storage.inventory) do
+  for i,item in ipairs(storage.inventory) do
     if ( world.itemType(item.name) == itemtype ) then
       -- TODO find the best item of all there is in the inventory
+      table.remove(storage.inventory, i)
       return item
     end
   end
@@ -79,26 +112,59 @@ end
 -- Finds an arbitrary item whose name matches the given regular expression and returns its item descriptor.
 -- Returns nil if there were no items found.
 function inv_get_item(itemname_regex)
-  for _,item in ipairs(storage.inventory) do
+  for i,item in ipairs(storage.inventory) do
     if ( string.find(item.name, itemname_regex) ) then
+      table.remove(storage.inventory, i)
       return item
     end
   end
   return nil
 end
 
--- Deposits all items matching the item name regex into the given container entity id
--- TODO: NOT THIS
-function inv_deposit_all(itemname_regex, container_id)
-  local trash_list = {}
-  for _,item in ipairs(storage.inventory) do
+function inv_get_items(itemname_regex, count)
+  if ( count == nil ) then count = 999999999 end
+
+  local found_items = {}
+  local i = 1
+  while ( i <= #storage.inventory and count > 0 ) do
+    local item = storage.inventory[i]
     if ( string.find(item.name, itemname_regex) ) then
-      -- attempt deposit, add to trash_list if successful
+
+      -- if we didn;t take the whole stack
+      if ( count < item.count ) then
+        local item_cpy = table_deepcopy(item)
+
+        item.count = item.count - count
+        item_cpy.count = count
+
+        table.insert(found_items, item_cpy)
+
+        count = 0
+        i = i + 1
+      else -- if we DID take the whole stack
+        table.insert(found_items, item)
+        count = count - item.count
+        table.remove(storage.inventory, i) -- remove emptied stack from inventory
+      end
+    else -- we didn't find the item we're looking for
+      i = i + 1
     end
   end
 
-  for _,item in ipairs(trash_list) do
-    inv_remove_item(item)
+  return found_items
+end
+
+-- Deposits all items matching the item name regex into the given container entity id
+-- TODO: NOT THIS
+function inv_deposit_all(itemname_regex, container_id, count)
+  if ( count == nil ) then count = 999999999 end
+
+  local found_items = inv_get_items(itemname_regex, count)
+
+  local results = world.containerAddItems(container_id, found_items)
+  results = inv_add_items(results)
+  if ( #results > 0 ) then
+    log("Unexpected " + #results + " items remaining from failed deposit (should have re-added to inventory).")
   end
 end
 
@@ -106,59 +172,55 @@ end
 function inv_unequip(slot)
   local itemd = entity.getItemSlot(slot)
   if ( itemd ~= nil and string.len(itemd.name) > 0 and itemd.count > 0 ) then
-    inv_add_item(itemd)
-    entity.setItemSlot(slot, nil)
-  end
-end
-
--- Removes the first item matching the given item descriptor from the inventory
-function inv_remove_item(item)
-  for i,inv_item in ipairs(storage.inventory) do
-    if ( item_eq(item,inv_item) ) then
-      table.remove(storage.inventory, i)
-      return
+    local result = inv_add_item(itemd)
+    if ( result == nil ) then
+      entity.setItemSlot(slot, nil)
     end
   end
 end
 
--- TODO : remove_from_inventory
--- TODO : Figure out which slot it uses by checking item type
+-- TODO : Figure out which slot it uses by checking item type? (reduced arguments, generic)
 function inv_equip(item, slot)
-  unequip(slot)
-  inv_remove_item(item)
+  if ( item == nil ) then return end
+  inv_unequip(slot)
   entity.setItemSlot(slot, item)
 end
 
-function inv_drop_all()
-  for i,slot in ipairs(EQUIP) do
-    unequip(slot)
-  end
-  
-  for _,item in ipairs(storage.inventory) do
-    world.spawnItem(item.name, entity.position(), item.count, item.data)
-  end
-  storage.inventory = {}
+-- TODO : Figure out which slot it uses by checking item type? (reduced arguments, generic)
+function inv_equip_itemtype(itemtype, slot)
+  inv_equip(inv_get_itemtype(itemtype), slot)
 end
 
--- containerSize()
--- containerItems()
--- containerItemAt(offset)
--- containerConsume(items)
--- containerConsumeAt(offset,count)
--- containerAvailable(items)
--- containerTakeAll()
--- containerTakeAt(offset)
--- containerTakeNumItemsAt(offset,amount)
--- containerItemsCanFit(items)
--- containerItemsFitWhere(items)
--- containerAddItems(items)
--- containerStackItems(items)
--- containerPutItemsAt(items,offset)
--- containerSwapItems(items,offset)
--- containerSwapItemsNoCombine(items,offset)
--- containerItemApply(items,offset)
+-- Drops all of the given items while emptying the given array-based table
+function inv_drop_items(items)
+  while ( #items > 0 ) do
+    local item = items[#items]
+    table.remove(items)
+
+    item_toss(item)
+  end
+end
+
+-- Drops the entire inventory and equipped items
+function inv_drop_all()
+  for i,slot in ipairs(EQUIP) do
+    inv_unequip(slot)
+  end
+  
+  inv_drop_items(storage.inventory)
+end
+
+---------------------------------------------------------------------------------------------------------
+-- Compares two items with each other and returns true if they item descriptors are equal, and false otherwise.
+-- Ignores the stack/count.
 function item_eq(item1, item2)
   return item.name == inv_item.name and table_deepcompare(item.data, inv_item.data)
+end
+
+-- Throws an item on to the ground
+-- TODO: Reset pickup counter?
+function item_toss(item)
+  world.spawnItem(item.name, entity.position(), item.count, item.data)
 end
 
 -- From http://snippets.luacode.org/snippets/Deep_Comparison_of_Two_Values_3
@@ -179,4 +241,20 @@ function table_deepcompare(t1,t2)
     if v1 == nil or not deepcompare(v1,v2) then return false end
   end
   return true
+end
+
+-- from http://lua-users.org/wiki/CopyTable
+function table_deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        --setmetatable(copy, deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
 end

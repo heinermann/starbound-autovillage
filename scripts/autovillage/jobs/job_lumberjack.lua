@@ -9,27 +9,29 @@ JOB["lumberjack"] = {
   
   enter = function()
     talk("time to <chop> some trees", "I'll go find some wood to <chop>")
-    local workitem = get_inventory_itemtype("harvestingtool")
-    equip(workitem, "primary")
+    inv_equip_itemtype("harvestingtool", "primary")
     
     return true
   end,
   
   update = function()
   
-    -- return items if inventory is full
-    if ( is_inventory_full() ) then
+    -- Inventory is full. Return items to home.
+    if ( inv_is_full() ) then
       -- return items to base state
       push_state("haul")
       return true
     end
     
-    -- If there are nearby items, go and pick them up
+    -- Something dropped nearby. Go pick it up.
     local drops = world.itemDropQuery(entity.position(), 500, { inSightOf = entity.id(), notAnObject = true, order = "nearest" } )
     if ( drops ~= nil and #drops > 0 ) then
       push_state("scavenge")
       return true
     end
+
+    -- TODO: Plant saplings
+
 
     -- find target tree
     if ( storage.job_target == nil or world.entityExists(storage.job_target) == false ) then
@@ -70,12 +72,13 @@ JOB["lumberjack"] = {
       end
     end
     
+    -- TODO: stop working at night
     return storage.job_target ~= nil and world.entityExists(storage.job_target)
   end,
   
   leave = function()
     talk("I think I'll give it a rest", "I've <done> <?working> for today", "I've <done> my <?daily> duties <?today>", "I'v <done> my job for today")
-    unequip("primary")
+    inv_unequip("primary")
   end,
   
   promote = function()

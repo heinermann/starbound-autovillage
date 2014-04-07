@@ -49,7 +49,7 @@ end
 
 --- Called when the npc has died and is about to be removed.
 function die()
-  drop_inventory("died")
+  inv_drop_all()
 end
 
 -- pushes walk state
