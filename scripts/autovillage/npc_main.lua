@@ -23,7 +23,7 @@ function main()
   update_thoughts()
   update_goals()
   update_state()
-  check_drops()
+  inv_check_drops()
   
   if ( storage.under_attack > 0 ) then 
     storage.under_attack = storage.under_attack - 1
@@ -37,8 +37,8 @@ function main()
     storage.burned = storage.burned - 1
   end
   
-  if ( get_inventory_itemtype("harvestingtool") ~= nil ) then
-    storage.job = "lumberjack"
+  if ( storage.job == nil and inv_has_itemtype("harvestingtool") ) then
+    assign_job("lumberjack")
   end
 end
 
@@ -156,11 +156,37 @@ function setFacingDirection(direction)
   entity.setAimPosition(vec2.add({ util.toDirection(direction), -1 }, entity.position()))
 end
 --------------------------------------------------------------------------------
--- Valid options:
---   openDoorCallback: function that will be passed a door entity id and should
---                     return true if the door can be opened
---   run: whether npc should run
+function positionToSurface(position)
+  local pos = { position[1], position[2] }
+
+  -- leave the ground by going up
+  while world.pointCollision(pos,true) do
+    pos[2] = pos[2] + 1
+  end
+
+  -- leave the air by going down
+  while not world.pointCollision(pos,false) do
+    pos[2] = pos[2] - 1
+  end
+
+  -- bring the surfaced point above ground
+  pos[2] = pos[2] + 2.5
+  return pos
+end
+
+function nextPathDelta()
+  local delta = entity.followPath()
+  local curPos = entity.position()
+  local pathNext = vec2.add(delta, curPos)
+  pathNext = positionToSurface(pathNext)
+  delta = vec2.sub(pathNext, curPos)
+
+  return delta
+end
+
+--------------------------------------------------------------------------------
 function moveTo(targetPosition)
+  targetPosition = positionToSurface(targetPosition)
   targetPosition = {
     math.floor(targetPosition[1]) + 0.5,
     math.floor(targetPosition[2]) + 0.5
@@ -171,12 +197,13 @@ function moveTo(targetPosition)
 --  world.debugLine(entity.position(), targetPosition, "red")
 --  world.debugPoint(targetPosition, "red")
 
+  
   local pathTargetPosition = self.pathing.targetPosition
   if pathTargetPosition == nil or
       targetPosition[1] ~= pathTargetPosition[1] or
       targetPosition[2] ~= pathTargetPosition[2] then
 
-    if entity.findPath(targetPosition, 3, 4) then
+    if entity.findPath(targetPosition, 5, 1000) then
       self.pathing.targetPosition = targetPosition
     else
       self.pathing.targetPosition = nil
@@ -186,7 +213,7 @@ function moveTo(targetPosition)
   end
 
   if self.pathing.targetPosition then
-    local pathDelta = entity.followPath()
+    local pathDelta = nextPathDelta() --entity.followPath()
 
     -- Store the path delta in case pathfinding doesn't succeed on the next try
     if pathDelta ~= nil then
@@ -303,7 +330,6 @@ function moveTo(targetPosition)
   end
 
   entity.move(delta[1], false)
-
   return true
 end
 

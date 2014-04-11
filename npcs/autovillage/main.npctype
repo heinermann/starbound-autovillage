@@ -16,7 +16,6 @@
     // Utility
     "/scripts/util.lua",
     "/scripts/vec2.lua",
-    "/scripts/dumpTable.lua",
     
     "/scripts/autovillage/constants.lua",
     

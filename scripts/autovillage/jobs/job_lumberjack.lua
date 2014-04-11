@@ -24,10 +24,19 @@ JOB["lumberjack"] = {
     end
     
     -- Something dropped nearby. Go pick it up.
-    local drops = world.itemDropQuery(entity.position(), 500, { inSightOf = entity.id(), notAnObject = true, order = "nearest" } )
-    if ( drops ~= nil and #drops > 0 ) then
-      push_state("scavenge")
-      return true
+    local drops_all = world.itemDropQuery(entity.position(), 100, { inSightOf = entity.id(), notAnObject = true, order = "nearest" } )
+    if ( drops_all ~= nil ) then
+      local drops = {}
+      for _,item in ipairs(drops_all) do
+        if ( world.lightLevel(world.entityPosition(item)) > 0.01 ) then
+          table.insert(drops,item)
+        end
+      end
+      if ( #drops > 0 ) then
+        talk("Found something shiny on the ground")
+        push_state("scavenge")
+        return true
+      end
     end
 
     -- TODO: Plant saplings
@@ -38,18 +47,22 @@ JOB["lumberjack"] = {
       --world.logInfo("Looking for target")
       storage.job_target = nil
       entity.endPrimaryFire()
-      local nearby = world.entityQuery(entity.position(), 1000, { inSightOf = entity.id(), order = "nearest" })
+      local nearby = world.entityQuery(entity.position(), 500, { inSightOf = entity.id(), order = "nearest" })
       
       -- look for more trees if none are nearby
       if ( nearby == nil or #nearby == 0 ) then
+        talk("I'll just wander around a bit first.")
         push_state("wander")
         return true
       end
       
       for i,v in ipairs(nearby) do
-        if ( world.entityType(v) == "plant" and world.entityExists(v) ) then
-          log("Found a " .. tostring(world.entityType(v)) )
-          walk_to( world.entityPosition(v) )
+        local plantType = world.entityType(v)
+        local plantPos = world.entityPosition(v)
+        if ( plantType == "plant" and world.entityExists(v) and
+              not world.pointCollision(plantPos)) and world.pointCollision(vec2.sub(plantPos, {0,1})) then
+          log("Found a rooted plant (" .. tostring(world.entityName(v)) .. ")" )
+          walk_to( plantPos )
           storage.job_target = v
           return true
         end

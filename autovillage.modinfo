@@ -1,7 +1,7 @@
 {
   "name" : "Autovillage",
   "path" : ".",
-  "dependencies" : [ "tabularasa2.1" ],
+  "dependencies" : [ "tabularasa2.0" ],
   "metadata": {
     "author" : "Heinermann",
     "description" : "A NPC AI that can sustain itself and expand its village's territory.",

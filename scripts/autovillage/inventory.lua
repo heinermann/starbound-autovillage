@@ -42,7 +42,7 @@ end
 -- is returned. If successful, then nil is returned.
 -- Guaranteed to make a copy of the item argument.
 function inv_add_item(item_)
-  local item = table_deepcopy(item_)
+  local item = deepcopy(item_)
 
   for _,inv_item in ipairs(storage.inventory) do
 
@@ -53,6 +53,7 @@ function inv_add_item(item_)
         item.count = item.count - (1000 - inv_item.count)
         inv_item.count = 1000
       else -- stack the items
+        log("Stacked " .. item.name)
         inv_item.count = inv_item.count + item.count
         return nil -- short-circuit
       end
@@ -62,7 +63,9 @@ function inv_add_item(item_)
 
   -- If no suitable item was found or there is some stack remaining
   if ( not inv_is_full() ) then
+    log("Added " .. item.name .. " to inventory")
     table.insert(storage.inventory, item)
+    log("Size " .. inv_size())
     return nil
   else
     return item
@@ -97,16 +100,29 @@ function inv_check_drops()
 end
 
 -- Finds an item of the given item type (ex: harvestingtool) and returns its item descriptor.
+-- The item is REMOVED from the inventory when it is found. To just check if an itemtype exists,
+-- see inv_has_itemtype.
 -- Returns nil if there were no items of that type available.
 function inv_get_itemtype(itemtype)
   for i,item in ipairs(storage.inventory) do
     if ( world.itemType(item.name) == itemtype ) then
       -- TODO find the best item of all there is in the inventory
       table.remove(storage.inventory, i)
+      log("Found item " .. item.name .. " of type " .. itemtype)
       return item
     end
   end
+  log("Unable to find itemtype " .. itemtype)
   return nil
+end
+
+function inv_has_itemtype(itemtype)
+  for i,item in ipairs(storage.inventory) do
+    if ( world.itemType(item.name) == itemtype ) then
+      return true
+    end
+  end
+  return false
 end
 
 -- Finds an arbitrary item whose name matches the given regular expression and returns its item descriptor.
@@ -132,7 +148,7 @@ function inv_get_items(itemname_regex, count)
 
       -- if we didn;t take the whole stack
       if ( count < item.count ) then
-        local item_cpy = table_deepcopy(item)
+        local item_cpy = deepcopy(item)
 
         item.count = item.count - count
         item_cpy.count = count
@@ -171,10 +187,13 @@ end
 -- Unequips the item found in the given inventory slot.
 function inv_unequip(slot)
   local itemd = entity.getItemSlot(slot)
-  if ( itemd ~= nil and string.len(itemd.name) > 0 and itemd.count > 0 ) then
+  if ( itemd ~= nil and itemd.name ~= "" ) then
     local result = inv_add_item(itemd)
     if ( result == nil ) then
+      log("Unequipped " .. itemd.name)
       entity.setItemSlot(slot, nil)
+    else
+      log("Couldn't unequip, no room!")
     end
   end
 end
@@ -183,12 +202,15 @@ end
 function inv_equip(item, slot)
   if ( item == nil ) then return end
   inv_unequip(slot)
+  log("Equipped " .. item.name)
   entity.setItemSlot(slot, item)
 end
 
 -- TODO : Figure out which slot it uses by checking item type? (reduced arguments, generic)
 function inv_equip_itemtype(itemtype, slot)
-  inv_equip(inv_get_itemtype(itemtype), slot)
+  local item = inv_get_itemtype(itemtype)
+  if ( item == nil ) then return end
+  inv_equip(item, slot)
 end
 
 -- Drops all of the given items while emptying the given array-based table
@@ -196,7 +218,6 @@ function inv_drop_items(items)
   while ( #items > 0 ) do
     local item = items[#items]
     table.remove(items)
-
     item_toss(item)
   end
 end
@@ -206,6 +227,8 @@ function inv_drop_all()
   for i,slot in ipairs(EQUIP) do
     inv_unequip(slot)
   end
+
+  log("Drop size: " .. inv_size())
   
   inv_drop_items(storage.inventory)
 end
@@ -214,17 +237,18 @@ end
 -- Compares two items with each other and returns true if they item descriptors are equal, and false otherwise.
 -- Ignores the stack/count.
 function item_eq(item1, item2)
-  return item.name == inv_item.name and table_deepcompare(item.data, inv_item.data)
+  return item1.name == item2.name and deepcompare(item1.data, item2.data)
 end
 
 -- Throws an item on to the ground
 -- TODO: Reset pickup counter?
 function item_toss(item)
+  log("Spawned a " .. item.name)
   world.spawnItem(item.name, entity.position(), item.count, item.data)
 end
 
 -- From http://snippets.luacode.org/snippets/Deep_Comparison_of_Two_Values_3
-function table_deepcompare(t1,t2)
+function deepcompare(t1,t2)
   local ty1 = type(t1)
   local ty2 = type(t2)
   if ty1 ~= ty2 then return false end
@@ -244,7 +268,7 @@ function table_deepcompare(t1,t2)
 end
 
 -- from http://lua-users.org/wiki/CopyTable
-function table_deepcopy(orig)
+function deepcopy(orig)
     local orig_type = type(orig)
     local copy
     if orig_type == 'table' then

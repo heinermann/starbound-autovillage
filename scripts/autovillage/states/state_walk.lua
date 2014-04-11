@@ -11,15 +11,14 @@ STATE["walk"] = {
   update = function(ctx)
     local target = ctx.destination
     local current = entity.position()
-    local remaining = world.magnitude( world.distance(current, target) );
+    local remaining = math.abs(world.magnitude( world.distance(current, target) ))
     
     -- if we have reached the target
     if ( remaining < 3 ) then
       return false
     end
     
-    moveTo(target)
-    return true
+    return moveTo(target)
   end,
 
   leave = function(ctx)
