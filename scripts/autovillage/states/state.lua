@@ -55,5 +55,12 @@ function update_state()
     pop_state()
   end
   
-  
+end
+
+function current_state()
+  if ( storage.state == nil or #storage.state == 0 ) then
+    return "none"
+  end
+
+  return storage.state[#storage.state].name
 end

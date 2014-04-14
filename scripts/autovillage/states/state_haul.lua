@@ -29,7 +29,7 @@ STATE["haul"] = {
     local bin_position = world.entityPosition(bin)
     
     -- if we reach the target crate
-    if ( world.magnitude( world.distance(entity.position(), bin_position )) < 3 ) then
+    if ( world.magnitude( world.distance(entity.position(), bin_position )) < 4 ) then
       deposit_all("metallic", bin)
       deposit_all("rainbowwood", bin)
       deposit_all("fullwood1", bin)

@@ -33,7 +33,6 @@ JOB["lumberjack"] = {
         end
       end
       if ( #drops > 0 ) then
-        talk("Found something shiny on the ground")
         push_state("scavenge")
         return true
       end
@@ -49,36 +48,36 @@ JOB["lumberjack"] = {
       entity.endPrimaryFire()
       local nearby = world.entityQuery(entity.position(), 500, { inSightOf = entity.id(), order = "nearest" })
       
-      -- look for more trees if none are nearby
-      if ( nearby == nil or #nearby == 0 ) then
-        talk("I'll just wander around a bit first.")
-        push_state("wander")
-        return true
-      end
-      
+      -- Check if the plant is similar to a tree
       for i,v in ipairs(nearby) do
-        local plantType = world.entityType(v)
-        local plantPos = world.entityPosition(v)
-        if ( plantType == "plant" and world.entityExists(v) and
-              not world.pointCollision(plantPos)) and world.pointCollision(vec2.sub(plantPos, {0,1})) then
-          log("Found a rooted plant (" .. tostring(world.entityName(v)) .. ")" )
-          walk_to( plantPos )
+        if get_entity_type(v) == "tree" then
+          log("Found a tree (" .. tostring(world.entityName(v)) .. ")" )
+          walk_to( world.entityPosition(v) )
           storage.job_target = v
+          debugv = "tree found"
           return true
         end
-      end -- for
+      end
+
+      -- look for more trees if none are nearby
+      talk("I'll just wander around a bit first.")
+      push_state("wander")
+      return true
+
     else --if ( storage.is_chopping_tree == false ) then
       local targetPos = world.entityPosition(storage.job_target)
-      if ( world.magnitude( world.distance(entity.position(), targetPos )) < 3 ) then
+      if ( world.magnitude( world.distance(entity.position(), targetPos )) < 4 ) then
         --log("chopping target")
         entity.setFacingDirection( targetPos[1] - entity.position()[1] )
-        entity.setAimPosition({targetPos[1], targetPos[2]+0.25})
+        entity.setAimPosition(vec2.add(targetPos,{0,0.1}))
         entity.beginPrimaryFire()
+        debugv = "trying to hit"
       else
         --entity.say("too far")
         --entity.jump()
         entity.endPrimaryFire()
-        walk_to( world.entityPosition(storage.job_target) )
+        walk_to( targetPos )
+        debugv = "out of range, " .. world.magnitude( world.distance(entity.position(), targetPos))
         return true
         --walk_to( targetPos )
         --storage.job_target = nil
@@ -98,3 +97,30 @@ JOB["lumberjack"] = {
     talk("just got promoted and now I can cut more wood")
   end
 }
+
+function get_entity_type(entityId)
+  local entityType = world.entityType(entityId)
+  local entityPos = world.entityPosition(entityId)
+
+  -- if it's not a plant
+  if entityType ~= "plant" then return entityType end
+
+  -- plant is somehow burried
+  if world.pointCollision(entityPos) then
+    return "plant"
+  end
+
+  -- if it's not rooted
+  if not world.pointCollision(vec2.sub(entityPos, {0,1})) then return "vine" end
+
+  -- check approx. 5 tiles above the root, if the plant ends then it's not a tree
+  for i = 1,3 do
+    local testPos = vec2.add(entityPos, {0,i})
+    if world.pointCollision(testPos) or not world.tileIsOccupied(testPos) then
+      return "plant"
+    end
+  end
+
+  -- otherwise it is a tree! (yay logic!)
+  return "tree"
+end

@@ -86,7 +86,7 @@ function inv_check_drops()
       local item = world.takeItemDrop(id, entity.id())
       if ( item ~= nil ) then
         log("Got a " .. item.name)
-        --DUMP.dumpTable(item)
+        -- dumptable(item,1)
 
         local result = inv_add_item(item)
         if ( result ~= nil ) then
@@ -208,6 +208,7 @@ end
 
 -- TODO : Figure out which slot it uses by checking item type? (reduced arguments, generic)
 function inv_equip_itemtype(itemtype, slot)
+  inv_unequip(slot)
   local item = inv_get_itemtype(itemtype)
   if ( item == nil ) then return end
   inv_equip(item, slot)
@@ -228,8 +229,6 @@ function inv_drop_all()
     inv_unequip(slot)
   end
 
-  log("Drop size: " .. inv_size())
-  
   inv_drop_items(storage.inventory)
 end
 
@@ -281,4 +280,31 @@ function deepcopy(orig)
         copy = orig
     end
     return copy
+end
+
+function strrep(s,rep)
+  local result = ""
+  while rep > 0 do
+    result = result .. s
+    rep = rep - 1
+  end
+  return result
+end
+
+function dumptable(t, depth)
+  depth = depth or 0
+  local tabs = strrep("  ", depth)
+  if type(t) ~= "table" then
+    log(tabs .. tostring(t))
+    return
+  end
+
+  for k,v in pairs(t) do
+    if type(v) == "table" then
+      log(tabs .. tostring(k) .. " : ")
+      dumptable(v, depth+1)
+    else
+      log(tabs .. tostring(k) .. " : " .. tostring(v))
+    end
+  end
 end

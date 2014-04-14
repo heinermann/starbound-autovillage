@@ -14,7 +14,7 @@ STATE["walk"] = {
     local remaining = math.abs(world.magnitude( world.distance(current, target) ))
     
     -- if we have reached the target
-    if ( remaining < 3 ) then
+    if ( remaining < 4 ) then
       return false
     end
     

@@ -113,11 +113,9 @@ end
 --       <interaction response config table (map)>
 --    }
 function interact(args)
-  if ( storage.job == nil ) then
-    entity.say("This is a test.")
-  else
-    entity.say("I am a " .. storage.job)
-  end
+  talk("Job: " .. (storage.job or "None") 
+    .. "\nState: " .. current_state() 
+    .. "\nDebug: " .. (debugv or "N/A"))
   return nil
 end
 
@@ -170,16 +168,16 @@ function positionToSurface(position)
   end
 
   -- bring the surfaced point above ground
-  pos[2] = pos[2] + 2.5
+  pos[2] = pos[2] + 2
   return pos
 end
 
 function nextPathDelta()
   local delta = entity.followPath()
-  local curPos = entity.position()
-  local pathNext = vec2.add(delta, curPos)
-  pathNext = positionToSurface(pathNext)
-  delta = vec2.sub(pathNext, curPos)
+  -- local curPos = entity.position()
+  -- local pathNext = vec2.add(delta, curPos)
+  -- pathNext = positionToSurface(pathNext)
+  -- delta = vec2.sub(pathNext, curPos)
 
   return delta
 end
@@ -192,6 +190,12 @@ function moveTo(targetPosition)
     math.floor(targetPosition[2]) + 0.5
   }
 
+  -- assume stuck?
+  if lastPosition == entity.position() then
+    log("Got stuck")
+    return false
+  end
+  lastPosition = entity.position()
   -- TODO just check if this is an x-only movement and the path is clear
 
 --  world.debugLine(entity.position(), targetPosition, "red")
@@ -229,7 +233,7 @@ function moveTo(targetPosition)
     delta = self.pathing.delta
   else
     delta = world.distance(targetPosition, position)
-    delta = vec2.mul(vec2.norm(delta), math.min(world.magnitude(delta), 2))
+    --delta = vec2.mul(vec2.norm(delta), math.min(world.magnitude(delta), 2))
   end
 
   setFacingDirection(delta[1])
