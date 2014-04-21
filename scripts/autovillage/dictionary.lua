@@ -82,5 +82,6 @@ WORDS = {
   ["insult"] = { "bucket", "hoser", "knob", "thief", "chicken" },
   ["chop"] = { "chop", "cut", "mince", "cleave", "hack" },
   ["done"] = { "done", "finished", "completed", "performed", "concluded" },
-  ["loot"] = { "loot", "stuff", "goods" }
+  ["loot"] = { "loot", "stuff", "goods" },
+  ["somewhere"] = { "somewhere", "someplace" }
 }

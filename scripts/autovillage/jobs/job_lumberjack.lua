@@ -1,3 +1,13 @@
+function verify_equipment()
+  local itemd = entity.getItemSlot("primary")
+  if itemd and world.itemType(itemd.name) == "harvestingtool" then
+    return true
+  end
+
+
+  inv_equip_itemtype("harvestingtool", "primary")
+end
+
 JOB["lumberjack"] = {
   tooltype = "harvestingtool",
   goals = { "rainbowwood", "baseboard", "darkwood", "fullwood1", "fullwood2", "medievalladder", "ornatewood", "platform", "platform2", "woodenplatform", "woodenwindow1", "woodenwindow2", "woodenpanelling" },
@@ -33,19 +43,33 @@ JOB["lumberjack"] = {
         end
       end
       if ( #drops > 0 ) then
+        debugv = "picking up junk"
         push_state("scavenge")
         return true
       end
     end
 
     -- TODO: Plant saplings
+    local sap = inv_get_item("sapling")
+    if sap ~= nil then
+      if place_object(sap) then
+        debugv = "planting trees"
+        --say("let's regrow the forest", "gonna be green", "I'll <?re>plant this <?somewhere>", "this will help me gather more <?wood>")
+        return true
+      end
+    end
 
 
     -- find target tree
     if ( storage.job_target == nil or world.entityExists(storage.job_target) == false ) then
-      --world.logInfo("Looking for target")
-      storage.job_target = nil
       entity.endPrimaryFire()
+      --world.logInfo("Looking for target")
+      if storage.job_target ~= nil then
+        storage.job_target = nil
+        push_state("wander")
+        return true
+      end
+      
       local nearby = world.entityQuery(entity.position(), 500, { inSightOf = entity.id(), order = "nearest" })
       
       -- Check if the plant is similar to a tree
@@ -68,6 +92,7 @@ JOB["lumberjack"] = {
       local targetPos = world.entityPosition(storage.job_target)
       if ( world.magnitude( world.distance(entity.position(), targetPos )) < 4 ) then
         --log("chopping target")
+        verify_equipment()
         entity.setFacingDirection( targetPos[1] - entity.position()[1] )
         entity.setAimPosition(vec2.add(targetPos,{0,0.1}))
         entity.beginPrimaryFire()

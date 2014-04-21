@@ -1,9 +1,10 @@
 STATE = {}
 
 function push_state(name, ctx)
-  if ( STATE[name] == nil ) then return end
+  if ( STATE[name] == nil ) then return false end
   if ( storage.state == nil ) then storage.state = {} end
   if ( ctx == nil ) then ctx = {} end
+  local result = true
 
   -- enter callback
   if ( STATE[name] ~= nil ) then
@@ -14,6 +15,7 @@ function push_state(name, ctx)
       local state = storage.state[#storage.state]
       if ( not STATE[state.name].enter(state.context) ) then
         table.remove(storage.state, state_index)
+        result = false
       end
 
     else
@@ -22,6 +24,7 @@ function push_state(name, ctx)
   else
     log("State not found: " .. name)
   end
+  return result
 end
 
 function pop_state()

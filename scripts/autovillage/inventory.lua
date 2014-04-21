@@ -86,7 +86,7 @@ function inv_check_drops()
       local item = world.takeItemDrop(id, entity.id())
       if ( item ~= nil ) then
         log("Got a " .. item.name)
-        -- dumptable(item,1)
+        dumptable(item)
 
         local result = inv_add_item(item)
         if ( result ~= nil ) then
@@ -118,7 +118,7 @@ end
 
 function inv_has_itemtype(itemtype)
   for i,item in ipairs(storage.inventory) do
-    if ( world.itemType(item.name) == itemtype ) then
+    if world.itemType(item.name) == itemtype then
       return true
     end
   end
@@ -128,26 +128,26 @@ end
 -- Finds an arbitrary item whose name matches the given regular expression and returns its item descriptor.
 -- Returns nil if there were no items found.
 function inv_get_item(itemname_regex)
-  for i,item in ipairs(storage.inventory) do
-    if ( string.find(item.name, itemname_regex) ) then
-      table.remove(storage.inventory, i)
-      return item
-    end
+  local result = inv_get_items(itemname_regex, 1)
+  if result and #result > 0 then
+    return result[1]
   end
   return nil
 end
 
+-- Finds at most count items whose name matches the given regular expression and returns a list.
+-- Returns an empty list of no items were found
 function inv_get_items(itemname_regex, count)
-  if ( count == nil ) then count = 999999999 end
+  if count == nil then count = 999999999 end
 
   local found_items = {}
   local i = 1
-  while ( i <= #storage.inventory and count > 0 ) do
+  while i <= #storage.inventory and count > 0 do
     local item = storage.inventory[i]
-    if ( string.find(item.name, itemname_regex) ) then
+    if string.find(item.name, itemname_regex) then
 
       -- if we didn;t take the whole stack
-      if ( count < item.count ) then
+      if count < item.count then
         local item_cpy = deepcopy(item)
 
         item.count = item.count - count
@@ -198,9 +198,15 @@ function inv_unequip(slot)
   end
 end
 
+-- Unequip and destroy the item in the given slot
+function inv_unequip_destroy(slot)
+  entity.setItemSlot(slot,nil)
+end
+
 -- TODO : Figure out which slot it uses by checking item type? (reduced arguments, generic)
 function inv_equip(item, slot)
-  if ( item == nil ) then return end
+  if item == nil then return end
+  if slot == nil then slot = "primary" end
   inv_unequip(slot)
   log("Equipped " .. item.name)
   entity.setItemSlot(slot, item)
@@ -292,7 +298,7 @@ function strrep(s,rep)
 end
 
 function dumptable(t, depth)
-  depth = depth or 0
+  depth = depth or 1
   local tabs = strrep("  ", depth)
   if type(t) ~= "table" then
     log(tabs .. tostring(t))

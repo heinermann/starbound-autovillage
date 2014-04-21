@@ -31,6 +31,7 @@
     "/scripts/autovillage/states/state_scavenge.lua",
     "/scripts/autovillage/states/state_walk.lua",
     "/scripts/autovillage/states/state_wander.lua",
+    "/scripts/autovillage/states/state_placeobject.lua",
     
     // Jobs
     "/scripts/autovillage/jobs/job.lua",

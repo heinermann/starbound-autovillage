@@ -1,3 +1,7 @@
+function walk_to(destination)
+  push_state("walk", { ["destination"] = destination })
+end
+
 STATE["walk"] = {
   enter = function(ctx)
     entity.setRunning(false)

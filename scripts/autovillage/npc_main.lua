@@ -52,11 +52,6 @@ function die()
   inv_drop_all()
 end
 
--- pushes walk state
-function walk_to(destination)
-  push_state("walk", { ["destination"] = destination })
-end
-
 --- Called after the NPC has taken damage.
 --
 -- @tab args Map of info about the damage, structured as:
@@ -134,6 +129,10 @@ function talk(...)
   storage.last_say = world.time()
 end
 
+function say(...)
+  talk(...)
+end
+
 function listen(from, message)
   
 end
@@ -190,12 +189,6 @@ function moveTo(targetPosition)
     math.floor(targetPosition[2]) + 0.5
   }
 
-  -- assume stuck?
-  if lastPosition == entity.position() then
-    log("Got stuck")
-    return false
-  end
-  lastPosition = entity.position()
   -- TODO just check if this is an x-only movement and the path is clear
 
 --  world.debugLine(entity.position(), targetPosition, "red")
